@@ -1,4 +1,4 @@
-import Question from "./model/Question";
+import Question from "../model/Question";
 import alasql from "alasql";
 
 const question = new Question(
@@ -18,26 +18,23 @@ const question = new Question(
     `SELECT * FROM Employees`);
 
 function compareResults(a: Array<any>, b: Array<any>) {
-    if (a.length != b.length) return false;
+    if (a.length !== b.length) return false;
 
-    // TODO: This isn't ideal, but it gets the job done for the time being. Write something better in the future.
     return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export function getQuestion(req: Record<string, any>, res: Record<string, any>) {
-    res.json({prompt: question.prompt, context: question.context});
+export function getQuestion() {
+    return {prompt: question.prompt, context: question.context};
 }
 
-export function checkAnswer(req: Record<string, any>, res: Record<string, any>) {
+export function checkAnswer(userQuery: string) {
     let result;
-    let userQuery = req.body.query;
     
     try {
         // Create a temporary database using the context queries provided with the question
         alasql("CREATE DATABASE tempdb; USE tempdb");
         alasql(question.context);
 
-        // Execute the answer key query and the student's query, and compare the results
         let expected = alasql(question.answerKey);
         let actual   = alasql(userQuery);
 
@@ -47,7 +44,6 @@ export function checkAnswer(req: Record<string, any>, res: Record<string, any>) 
     } 
     catch (error) {
         console.log(`Error occured when user submitted query: "${userQuery}"`);
-        //result = "Something went wrong";
         result = "You answered incorrectly";
     }
     finally {
@@ -55,5 +51,5 @@ export function checkAnswer(req: Record<string, any>, res: Record<string, any>) 
         alasql("DROP DATABASE IF EXISTS tempdb");
     }
 
-    res.json({result: result});
+    return result;
 }

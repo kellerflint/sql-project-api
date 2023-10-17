@@ -1,9 +1,7 @@
 import express from "express";
 import cors from "cors";
 
-import apiFunction from "./ApiTest";
-
-import { getQuestion, checkAnswer } from "./Assignment";
+import { getQuestion, checkAnswer } from "./service/AssignmentService";
 
 const app = express();
 const port = 3001;
@@ -18,10 +16,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 
-app.get('/question', getQuestion);
-app.post('/answer', checkAnswer);
-
-app.post('/api', apiFunction);
+app.get('/question', (req, res) => {
+    let question = getQuestion();
+    res.json(question);
+});
+app.post('/answer', (req, res) => {
+    let query = req.body.query;
+    let result = checkAnswer(query);
+    res.json({result: result});
+});
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);

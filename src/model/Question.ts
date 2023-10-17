@@ -9,8 +9,3 @@ export default class Question {
         this.answerKey = answerKey;
     }
 }
-
-// const QUESTIONS: Array<Question> = [
-//     new Question("Select all columns from the \"Employees\" table.", "SELECT * FROM Employees"),
-//     new Question("Select the \"Revenue\" column from the \"Companies\" table.", "SELECT Revenue FROM Companies")
-// ];
