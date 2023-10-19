@@ -1,5 +1,5 @@
 import Question from "../model/Question";
-import alasql from "alasql";
+import { TemporaryDatabase } from "./DatabaseSandboxService";
 
 const question = new Question(
     // Prompt for the user
@@ -15,7 +15,8 @@ const question = new Question(
         (5, "Marvin", 1);`,
 
     // Answer key query
-    `SELECT * FROM Employees`);
+    `SELECT * FROM Employees`
+);
 
 function compareResults(a: Array<any>, b: Array<any>) {
     if (a.length !== b.length) return false;
@@ -29,27 +30,18 @@ export function getQuestion() {
 
 export function checkAnswer(userQuery: string) {
     let result;
+
+    // Create a temporary database using the context queries provided with the question
+    let db = new TemporaryDatabase(question.context);
     
-    try {
-        // Create a temporary database using the context queries provided with the question
-        alasql("CREATE DATABASE tempdb; USE tempdb");
-        alasql(question.context);
+    let expected = db.exec(question.answerKey);
+    let actual   = db.exec(userQuery);
 
-        let expected = alasql(question.answerKey);
-        let actual   = alasql(userQuery);
+    let isCorrect = compareResults(expected, actual);
+    result = isCorrect ? "You answered correctly" : "You answered incorrectly";
 
-        let isCorrect = compareResults(expected, actual);
-        
-        result = isCorrect ? "You answered correctly" : "You answered incorrectly";
-    } 
-    catch (error) {
-        console.log(`Error occured when user submitted query: "${userQuery}"`);
-        result = "You answered incorrectly";
-    }
-    finally {
-        // Cleanup the temporary database
-        alasql("DROP DATABASE IF EXISTS tempdb");
-    }
+    // Cleanup the temporary database
+    db.destroy();
 
     return result;
 }
