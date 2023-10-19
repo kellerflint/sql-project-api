@@ -35,6 +35,7 @@ export class TemporaryDatabase {
             alasql(`USE ${this.name}`);
             return alasql(query);
         } catch (error) {
+            console.log(`Error occured while executing query: ${query}`);
             return error;
         }
     }
