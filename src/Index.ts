@@ -4,7 +4,7 @@ import cors from "cors";
 import { getQuestion, checkAnswer } from "./service/AssignmentService";
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3000;
 
 // For parsing application/json
 app.use(express.json());
@@ -15,6 +15,9 @@ app.use(express.urlencoded({ extended: true }));
 // This is necessary to transfer data in a local environment
 app.use(cors());
 
+app.get('/', (req, res) => {
+    res.json("Hello World!");
+});
 
 app.get('/question', (req, res) => {
     let question = getQuestion();
