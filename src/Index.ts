@@ -6,7 +6,7 @@ import { getQuestion, checkAnswer } from "./service/AssignmentService";
 const app = express();
 const port = process.env.PORT || 3000;
 
-// For parsing application/json
+// For parsing application/json test
 app.use(express.json());
  
 // For parsing application/x-www-form-urlencoded
