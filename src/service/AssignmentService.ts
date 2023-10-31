@@ -76,8 +76,8 @@ export function checkAnswer(userQuery: string) {
     // Create a temporary database using the context queries provided with the question
     let db = new TemporaryDatabase(question.context);
     
-    let expected = db.exec(question.answerKey);
-    let actual   = db.exec(userQuery);
+    const expected = db.exec(question.answerKey);
+    const actual   = db.exec(userQuery);
 
     let isCorrect = compareResults(expected, actual);
     result = isCorrect ? "You answered correctly" : "You answered incorrectly";

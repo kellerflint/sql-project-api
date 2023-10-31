@@ -1,5 +1,5 @@
 import alasql from "alasql";
-import { QueryErrorResult, QueryResult } from "./DatabaseService";
+import { formatQueryError, QueryResult } from "./DatabaseService";
 
 export class TemporaryDatabase {
     static id: number = 0;
@@ -49,7 +49,7 @@ export class TemporaryDatabase {
                 error: ""
             };
         } catch (error: unknown) {
-            return QueryErrorResult(error);
+            return formatQueryError(error);
         }
     }
 

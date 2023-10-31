@@ -18,13 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 const db = new DatabaseConnection();
-
-db.exec("SELECT * FROM users").then(res => {
-    if (res.success)
-        console.log(`ROWS: ${res.rows.length}, USERNAME 0: ${res.rows[0]["username"]}`);
-    else
-        console.log(`ERROR: ${res.error}`);
-});
+db.connect();
 
 app.get('/assignments', async (req, res) => {
     const result = await getAssignmentList(db);
