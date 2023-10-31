@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
 
-import { getQuestion, checkAnswer } from "./service/AssignmentService";
+import { getQuestion, checkAnswer, getAssignmentList, getQuestionList, getQuestionData } from "./service/AssignmentService";
+
+import DatabaseConnection from "./service/DatabaseService";
 
 const app = express();
 const port = 3001;
@@ -15,11 +17,42 @@ app.use(express.urlencoded({ extended: true }));
 // This is necessary to transfer data in a local environment
 app.use(cors());
 
+const db = new DatabaseConnection();
+
+db.exec("SELECT * FROM users").then(res => {
+    if (res.success)
+        console.log(`ROWS: ${res.rows.length}, USERNAME 0: ${res.rows[0]["username"]}`);
+    else
+        console.log(`ERROR: ${res.error}`);
+});
+
+app.get('/assignments', async (req, res) => {
+    const result = await getAssignmentList(db);
+    res.json(result);
+});
+app.get('/questions', async (req, res) => {
+    const assignment: number = 'assignment' in req.query
+        ? parseInt(req.query.assignment as string)
+        : -1;
+
+    const result = await getQuestionList(db, assignment);
+    res.json(result);
+});
+
+app.get('/questiondata', async (req, res) => {
+    const question: number = 'question' in req.query
+        ? parseInt(req.query.question as string)
+        : -1;
+
+    const result = await getQuestionData(db, question);
+    res.json(result);
+});
 
 app.get('/question', (req, res) => {
     let question = getQuestion();
     res.json(question);
 });
+
 app.post('/answer', (req, res) => {
     let query = req.body.query;
     let result = checkAnswer(query);

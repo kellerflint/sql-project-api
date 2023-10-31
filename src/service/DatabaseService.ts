@@ -2,6 +2,22 @@ import sql from "mssql";
 
 import { getDbConfig } from "./ConfigService";
 
+export interface QueryResult {
+    success: boolean;
+    rows: Array<any>;
+    error: string;
+}
+
+export function QueryErrorResult(error: unknown): QueryResult {
+    return {
+        success: false,
+        rows: [],
+        error: error instanceof Error
+            ? error.message
+            : "Unknown error"
+    };
+}
+
 export default class DatabaseConnection {
     private connected: boolean = false;
 
@@ -15,12 +31,21 @@ export default class DatabaseConnection {
         }
     }
 
-    async exec(query: string): Promise<Array<any>> {
+    async exec(query: string): Promise<QueryResult> {
         if (!this.connected) {
             await this.connect();
         }
 
-        const result: sql.IResult<any> = await sql.query(query);
-        return result.recordset;
+        try {
+            const sqlResult: sql.IResult<any> = await sql.query(query);
+            return {
+                rows: sqlResult.recordset,
+                success: true,
+                error: ""
+            };
+        }
+        catch (error: unknown) {
+            return QueryErrorResult(error);
+        }
     }
 }

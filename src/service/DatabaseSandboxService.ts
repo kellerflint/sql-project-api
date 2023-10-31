@@ -1,4 +1,5 @@
 import alasql from "alasql";
+import { QueryErrorResult, QueryResult } from "./DatabaseService";
 
 export class TemporaryDatabase {
     static id: number = 0;
@@ -13,7 +14,11 @@ export class TemporaryDatabase {
         this.name = `_tempdb${TemporaryDatabase.id++}`;
 
         alasql(`CREATE DATABASE ${this.name}`);
-        this.exec(context);
+        
+        const contextResult = this.exec(context);
+        if (!contextResult.success) {
+            throw new Error(contextResult.error);
+        }
     }
 
     /**
@@ -25,18 +30,26 @@ export class TemporaryDatabase {
      * @param query A SQL query.
      * @returns Result of the query, or null if the database has been destroyed.
      */
-    exec(query: string): any {
+    exec(query: string): QueryResult {
         // Do not execute the query if the database has been destroyed.
         if (this.destroyed) {
-            return null;
+            return {
+                success: false,
+                rows: [],
+                error: "Database no longer exists"
+            };
         }
 
         try {
             alasql(`USE ${this.name}`);
-            return alasql(query);
-        } catch (error) {
-            console.log(`Error occured while executing query: ${query}`);
-            return error;
+            const result: Array<any> = alasql(query);
+            return {
+                rows: result,
+                success: true,
+                error: ""
+            };
+        } catch (error: unknown) {
+            return QueryErrorResult(error);
         }
     }
 

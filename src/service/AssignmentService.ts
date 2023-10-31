@@ -1,5 +1,6 @@
 import Question from "../model/Question";
 import { TemporaryDatabase } from "./DatabaseSandboxService";
+import DatabaseConnection, { QueryResult } from "./DatabaseService";
 
 const question = new Question(
     // Prompt for the user
@@ -18,14 +19,55 @@ const question = new Question(
     `SELECT * FROM Employees`
 );
 
-function compareResults(a: Array<any>, b: Array<any>) {
-    if (a.length !== b.length) return false;
+function compareResults(a: QueryResult, b: QueryResult) {
+    if (a.rows.length !== b.rows.length) return false;
 
     return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function formatQueryResult(result: QueryResult) {
+    return result.success ? result.rows : { "error": result.error };
+}
+function formatSingleQueryResult(result: QueryResult) {
+    return result.success
+        ? (result.rows.length > 0 ? result.rows[0] : { "error": "No data was found" })
+        : { "error": result.error };
+}
+
 export function getQuestion() {
     return {prompt: question.prompt, context: question.context};
+}
+
+export async function getAssignmentList(db: DatabaseConnection) {
+    const result: QueryResult = await db.exec(`
+        SELECT
+                a.id, a.title,
+                COUNT(q.id) 'questions',
+                COALESCE(SUM(q.points), 0) 'points'
+            FROM assignments a
+                LEFT JOIN questions q ON q.assignment_id = a.id
+            GROUP BY a.id, a.title;`);
+
+    return formatQueryResult(result);
+}
+
+export async function getQuestionList(db: DatabaseConnection, assignmentId: number) {
+    const result: QueryResult = await db.exec(`
+        SELECT id, question, points
+            FROM questions
+            WHERE assignment_id = ${assignmentId};`);
+
+    return formatQueryResult(result);
+}
+
+export async function getQuestionData(db: DatabaseConnection, questionId: number) {
+    const result: QueryResult = await db.exec(`
+        SELECT q.id, q.question, c.context, q.points
+            FROM questions q
+            JOIN contexts c ON q.context_id = c.id
+            WHERE q.id = ${questionId};`);
+
+    return formatSingleQueryResult(result);
 }
 
 export function checkAnswer(userQuery: string) {
