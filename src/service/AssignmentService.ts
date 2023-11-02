@@ -1,6 +1,7 @@
 import Question from "../model/Question";
 import { TemporaryDatabase } from "./DatabaseSandboxService";
-import DatabaseConnection, { QueryResult } from "./DatabaseService";
+import DatabaseConnection from "./DatabaseService";
+import { QueryResult } from "../model/QueryResult";
 
 const question = new Question(
     // Prompt for the user
