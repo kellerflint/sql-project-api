@@ -43,13 +43,13 @@ app.get('/questiondata', async (req, res) => {
 });
 
 app.get('/question', (req, res) => {
-    let question = getQuestion();
+    const question = getQuestion();
     res.json(question);
 });
 
 app.post('/answer', (req, res) => {
-    let query = req.body.query;
-    let result = checkAnswer(query);
+    const query = req.body.query;
+    const result = checkAnswer(query);
     res.json({result: result});
 });
 

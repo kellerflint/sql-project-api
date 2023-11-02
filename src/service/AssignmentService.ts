@@ -72,16 +72,14 @@ export async function getQuestionData(db: DatabaseConnection, questionId: number
 }
 
 export function checkAnswer(userQuery: string) {
-    let result;
-
     // Create a temporary database using the context queries provided with the question
-    let db = new TemporaryDatabase(question.context);
+    const db = new TemporaryDatabase(question.context);
     
     const expected = db.exec(question.answerKey);
     const actual   = db.exec(userQuery);
 
-    let isCorrect = compareResults(expected, actual);
-    result = isCorrect ? "You answered correctly" : "You answered incorrectly";
+    const isCorrect = compareResults(expected, actual);
+    const result = isCorrect ? "You answered correctly" : "You answered incorrectly";
 
     // Cleanup the temporary database
     db.destroy();
