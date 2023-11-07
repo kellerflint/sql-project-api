@@ -20,25 +20,49 @@ app.use(cors());
 const db = new DatabaseConnection();
 db.connect();
 
+function checkFields(body: Object, res: any, ...fields: string[]): boolean {
+    const missing: string[] = [];
+
+    fields.forEach(field => {
+        if (!(field in body)) {
+            missing.push(field);
+        }
+    });
+
+    if (missing.length > 0) {
+        res.status(400).json({missingFields: missing});
+        return false;
+    }
+
+    return true;
+}
+
+app.get('/test', async (req, res) => {
+    if (!checkFields(req.query, res, 'field1', 'field2'))
+        return;
+    
+    res.json({field1: req.query.field1, field2: req.query.field2});
+});
+
 app.get('/assignments', async (req, res) => {
     const result = await getAssignmentList(db);
     res.json(result);
 });
 app.get('/questions', async (req, res) => {
-    const assignment: number = 'assignment' in req.query
-        ? parseInt(req.query.assignment as string)
-        : -1;
+    if (!checkFields(req.query, res, 'assignment'))
+        return;
 
-    const result = await getQuestionList(db, assignment);
+    const assignmentId = parseInt(req.query.assignment as string);
+    const result = await getQuestionList(db, assignmentId);
     res.json(result);
 });
 
 app.get('/questiondata', async (req, res) => {
-    const question: number = 'question' in req.query
-        ? parseInt(req.query.question as string)
-        : -1;
+    if (!checkFields(req.query, res, 'question'))
+        return;
 
-    const result = await getQuestionData(db, question);
+    const questionId = parseInt(req.query.question as string);
+    const result = await getQuestionData(db, questionId);
     res.json(result);
 });
 
