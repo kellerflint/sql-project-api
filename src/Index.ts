@@ -42,8 +42,7 @@ app.get('/assignments', async (req, res) => {
     res.status(result.status).json(result.responseJson);
 });
 app.get('/questions', async (req, res) => {
-    if (!checkFields(req.query, res, 'assignment'))
-        return;
+    if (!checkFields(req.query, res, 'assignment')) return;
 
     const assignmentId = parseInt(req.query.assignment as string);
     const result = await getQuestionList(db, assignmentId);
@@ -52,8 +51,7 @@ app.get('/questions', async (req, res) => {
 });
 
 app.get('/question', async (req, res) => {
-    if (!checkFields(req.query, res, 'q'))
-        return;
+    if (!checkFields(req.query, res, 'q')) return;
 
     const questionId = parseInt(req.query.q as string);
     const result = await getQuestionData(db, questionId);
@@ -61,8 +59,7 @@ app.get('/question', async (req, res) => {
 });
 
 app.post('/answer', async (req, res) => {
-    if (!checkFields(req.body, res, "query", "question"))
-        return;
+    if (!checkFields(req.body, res, "query", "question")) return;
 
     const question = parseInt(req.body.question as string);
     const query = req.body.query as string;
