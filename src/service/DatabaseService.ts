@@ -17,13 +17,21 @@ export default class DatabaseConnection {
         }
     }
 
-    async exec(query: string): Promise<QueryResult> {
+    async exec(query: string, params: object = {}): Promise<QueryResult> {
         if (!this.connected) {
             await this.connect();
         }
 
         try {
-            const sqlResult: sql.IResult<any> = await sql.query(query);
+            const req = new sql.Request();
+
+            for (const key in params) {
+                const value = (params as any)[key];
+                req.input(key, value);
+            }
+
+            const sqlResult: sql.IResult<any> = await req.query(query);
+
             return {
                 rows: sqlResult.recordset,
                 success: true,

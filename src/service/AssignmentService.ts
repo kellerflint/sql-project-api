@@ -31,8 +31,8 @@ function formatQueryResult(result: QueryResult) {
 }
 function formatSingleQueryResult(result: QueryResult) {
     return result.success
-        ? (result.rows.length > 0 ? result.rows[0] : { "error": "No data was found" })
-        : { "error": result.error };
+        ? (result.rows.length > 0 ? result.rows[0] : { error: "No data was found" })
+        : { error: result.error };
 }
 
 export function getQuestion() {
@@ -56,7 +56,7 @@ export async function getQuestionList(db: DatabaseConnection, assignmentId: numb
     const result: QueryResult = await db.exec(`
         SELECT id, question, points
             FROM questions
-            WHERE assignment_id = ${assignmentId};`);
+            WHERE assignment_id = @assignmentId;`, { 'assignmentId': assignmentId });
 
     return formatQueryResult(result);
 }
@@ -66,7 +66,7 @@ export async function getQuestionData(db: DatabaseConnection, questionId: number
         SELECT q.id, q.question, c.context, q.points
             FROM questions q
             JOIN contexts c ON q.context_id = c.id
-            WHERE q.id = ${questionId};`);
+            WHERE q.id = @questionId;`, { 'questionId': questionId } );
 
     return formatSingleQueryResult(result);
 }
