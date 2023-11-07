@@ -104,7 +104,6 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
     const actual   = tempDb.exec(userQuery);
 
     const isCorrect = compareResults(expected, actual);
-    const result = isCorrect ? "You answered correctly" : "You answered incorrectly";
 
     // Cleanup the temporary database
     tempDb.destroy();
