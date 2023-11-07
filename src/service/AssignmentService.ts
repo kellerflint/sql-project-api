@@ -2,23 +2,8 @@ import Question from "../model/Question";
 import { TemporaryDatabase } from "./DatabaseSandboxService";
 import DatabaseConnection from "./DatabaseService";
 import { QueryResult } from "../model/QueryResult";
-
-const question = new Question(
-    // Prompt for the user
-    `Select all columns from the "Employees" table.`,
-
-    // SQL queries to configure the context
-    `CREATE TABLE Employees (ID INT, Name VARCHAR(255), Supervisor INT);
-    INSERT INTO Employees VALUES
-        (1, "Joe", NULL),
-        (2, "Bill", 1),
-        (3, "Jill", NULL),
-        (4, "Bob", 3),
-        (5, "Marvin", 1);`,
-
-    // Answer key query
-    `SELECT * FROM Employees`
-);
+import RouteResult from "../model/RouteResult";
+import { STATUS_CODES } from "http";
 
 function compareResults(a: QueryResult, b: QueryResult) {
     if (a.rows.length !== b.rows.length) return false;
@@ -26,17 +11,10 @@ function compareResults(a: QueryResult, b: QueryResult) {
     return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function formatQueryResult(result: QueryResult) {
-    return result.success ? result.rows : { "error": result.error };
-}
-function formatSingleQueryResult(result: QueryResult) {
+function formatQueryResult(result: QueryResult): RouteResult {
     return result.success
-        ? (result.rows.length > 0 ? result.rows[0] : { error: "No data was found" })
-        : { error: result.error };
-}
-
-export function getQuestion() {
-    return {prompt: question.prompt, context: question.context};
+        ? { status: 200, responseJson: result.rows }
+        : { status: 500, responseJson: { error: result.error } };
 }
 
 export async function getAssignmentList(db: DatabaseConnection) {
@@ -61,28 +39,81 @@ export async function getQuestionList(db: DatabaseConnection, assignmentId: numb
     return formatQueryResult(result);
 }
 
-export async function getQuestionData(db: DatabaseConnection, questionId: number) {
+export async function getQuestionData(db: DatabaseConnection, questionId: number): Promise<RouteResult> {
     const result: QueryResult = await db.exec(`
-        SELECT q.id, q.question, c.context, q.points
+        SELECT q.id, q.question, q.answer, c.context, q.points
             FROM questions q
             JOIN contexts c ON q.context_id = c.id
             WHERE q.id = @questionId;`, { 'questionId': questionId } );
 
-    return formatSingleQueryResult(result);
+    if (!result.success) {
+        return {
+            status: 500,
+            responseJson: { error: result.error }
+        }
+    } else if (result.rows.length == 0) {
+        return {
+            status: 404,
+            responseJson: { error: "The requested question does not exist" }
+        }
+    } else {
+        const row = result.rows[0];
+
+        const sandbox = new TemporaryDatabase(row.context);
+        const expected = sandbox.exec(row.answer).rows;
+        sandbox.destroy();
+
+        return {
+            status: 200,
+            responseJson: {
+                id: row.id,
+                question: row.question,
+                context: row.context,
+                points: row.points,
+                expected: expected
+            }
+        };
+    }
 }
 
-export function checkAnswer(userQuery: string) {
+export async function checkAnswer(db: DatabaseConnection, questionId: number, userQuery: string): Promise<RouteResult> {
+    const questionResult: QueryResult = await db.exec(`
+        SELECT q.answer, c.context
+            FROM questions q
+            JOIN contexts c ON q.context_id = c.id
+            WHERE q.id = @id;`, { 'id': questionId } );
+
+    if (!questionResult.success) {
+        return {
+            status: 500,
+            responseJson: { error: questionResult.error }
+        };
+    } else if (questionResult.rows.length == 0) {
+        return {
+            status: 404,
+            responseJson: { error: "The given question ID does not exist" }
+        };
+    }
+
+    const question = questionResult.rows[0];
+
     // Create a temporary database using the context queries provided with the question
-    const db = new TemporaryDatabase(question.context);
+    const tempDb = new TemporaryDatabase(question.context);
     
-    const expected = db.exec(question.answerKey);
-    const actual   = db.exec(userQuery);
+    const expected = tempDb.exec(question.answer);
+    const actual   = tempDb.exec(userQuery);
 
     const isCorrect = compareResults(expected, actual);
     const result = isCorrect ? "You answered correctly" : "You answered incorrectly";
 
     // Cleanup the temporary database
-    db.destroy();
+    tempDb.destroy();
 
-    return result;
+    return {
+        status: 200,
+        responseJson: {
+            success: isCorrect,
+            result: actual.success ? actual.rows : actual.error
+        }
+    };
 }

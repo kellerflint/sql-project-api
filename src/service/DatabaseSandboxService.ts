@@ -42,6 +42,7 @@ export class TemporaryDatabase {
 
         try {
             alasql(`USE ${this.name}`);
+
             const result: Array<any> = alasql(query);
             return {
                 rows: result,
