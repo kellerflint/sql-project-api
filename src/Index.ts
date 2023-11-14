@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 
-import { checkAnswer, getAssignmentList, getQuestionList, getQuestionData } from "./service/AssignmentService";
+import { checkAnswer, getAssignmentList, getQuestionList, getQuestionData, clearHistory } from "./service/AssignmentService";
 
 import DatabaseConnection from "./service/DatabaseService";
 
@@ -65,6 +65,13 @@ app.post('/answer', async (req, res) => {
     const query = req.body.query as string;
     const result = await checkAnswer(db, question, query);
 
+    res.status(result.status).json(result.responseJson);
+});
+
+app.post('/clearhistory', async (req, res) => {
+    if (!checkFields(req.body, res, "question")) return;
+
+    const result = await clearHistory(db, req.body.question);
     res.status(result.status).json(result.responseJson);
 });
 

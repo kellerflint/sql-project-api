@@ -30,7 +30,7 @@ CREATE TABLE contexts (
 CREATE TABLE users_assignments (
     id INT PRIMARY KEY,
     user_id INT NOT NULL FOREIGN KEY REFERENCES users(id),
-    assign_id INT NOT NULL FOREIGN KEY REFERENCES assignments(id)
+    assignment_id INT NOT NULL FOREIGN KEY REFERENCES assignments(id)
 );
  
 CREATE TABLE answers (

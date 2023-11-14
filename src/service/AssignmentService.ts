@@ -5,6 +5,11 @@ import { QueryResult } from "../model/QueryResult";
 import RouteResult from "../model/RouteResult";
 import { STATUS_CODES } from "http";
 
+const HISTORY_DELIMITOR = '\0';
+
+// TODO: Use real values for user id
+const DEFAULT_USER_ID = 1;
+
 function compareResults(a: QueryResult, b: QueryResult) {
     if (a.rows.length !== b.rows.length) return false;
 
@@ -40,11 +45,15 @@ export async function getQuestionList(db: DatabaseConnection, assignmentId: numb
 }
 
 export async function getQuestionData(db: DatabaseConnection, questionId: number): Promise<RouteResult> {
+    
+
     const result: QueryResult = await db.exec(`
-        SELECT q.id, q.question, q.answer, c.context, q.points
+        SELECT q.id, q.question, q.answer, c.context, q.points, a.query_history
             FROM questions q
             JOIN contexts c ON q.context_id = c.id
-            WHERE q.id = @questionId;`, { 'questionId': questionId } );
+            LEFT JOIN users_assignments ua ON ua.assignment_id = q.assignment_id AND ua.user_id = @userId
+            LEFT JOIN answers a ON a.ua_id = ua.id AND a.question_id = q.id
+            WHERE q.id = @questionId;`, { 'questionId': questionId, 'userId': DEFAULT_USER_ID } );
 
     if (!result.success) {
         return {
@@ -70,7 +79,8 @@ export async function getQuestionData(db: DatabaseConnection, questionId: number
                 question: row.question,
                 context: row.context,
                 points: row.points,
-                expected: expected
+                expected: expected,
+                history: row.query_history != null ? row.query_history.split(HISTORY_DELIMITOR) : []
             }
         };
     }
@@ -97,14 +107,10 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
 
     const question = questionResult.rows[0];
 
-
-    // TODO: Use a real value here
-    const userId = 1;
-
     const assignmentId = question.assignment_id;
 
     const uaParams = {
-        user: userId,
+        user: DEFAULT_USER_ID,
         assignment: assignmentId
     };
 
@@ -132,7 +138,7 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
     }
 
     const uaSelectResult = await db.exec(`
-        SEELCT id FROM users_assignments
+        SELECT id FROM users_assignments
         WHERE user_id = @user AND assignment_id = @assignment;`, uaParams);
 
     if (!uaSelectResult.success) {
@@ -166,7 +172,7 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
 
 
 
-    const answerSelectResult = await db.exec(`SELECT id, query_history FROM answer WHERE ua_id = @ua AND question_id = @question;`,
+    const answerSelectResult = await db.exec(`SELECT id, query_history FROM answers WHERE ua_id = @ua AND question_id = @question;`,
         { ua: uaId, question: questionId });
 
     if (!answerSelectResult.success) {
@@ -196,7 +202,8 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
         // UPDATE existing answer
         
         const answerId = answerSelectResult.rows[0].id;
-        const previousHistory = answerSelectResult.rows[0].query_history;;
+        const history = answerSelectResult.rows[0].query_history.split(HISTORY_DELIMITOR);
+        history.push(userQuery);
 
         const answerInsertResult = await db.exec(`UPDATE answers SET ua_id = @ua, question_id = @question, answer = @answer, query_history = @history, score = @score
             WHERE id = @answerId`,
@@ -204,7 +211,7 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
             ua: uaId,
             question: questionId,
             answer: userQuery,
-            history: previousHistory + ", " + userQuery,
+            history: history.join(HISTORY_DELIMITOR),
             score: isCorrect ? question.points : 0,
             answerId: answerId
         });
@@ -217,8 +224,6 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
         }
     }
 
-
-
     return {
         status: 200,
         responseJson: {
@@ -226,4 +231,41 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
             result: actual.success ? actual.rows : actual.error
         }
     };
+}
+
+export async function clearHistory(db: DatabaseConnection, questionId: number): Promise<RouteResult> {
+    const uaResult = await db.exec(`
+        SELECT ua.id
+            FROM questions q
+            JOIN assignments a ON a.id = q.assignment_id
+            JOIN users_assignments ua ON ua.assignment_id = a.id AND ua.user_id = @user
+            WHERE q.id = @id`,
+        {id: questionId, user: DEFAULT_USER_ID});
+    
+    if (!uaResult.success) {
+        return {
+            status: 500,
+            responseJson: { error: uaResult.error }
+        }
+    } else if (uaResult.rows.length == 0) {
+        return {
+            status: 404,
+            responseJson: {}
+        }
+    }
+
+    const uaId = uaResult.rows[0].id;
+
+    const result = await(db.exec(`
+        UPDATE answers SET query_history = ''
+        WHERE ua_id = @ua AND question_id = @question`,
+        { question: questionId, ua: uaId}));
+
+    return result.success ? {
+            status: 200,
+            responseJson: {}
+        } : {
+            status: 500,
+            responseJson: { error: result.error }
+        };
 }
