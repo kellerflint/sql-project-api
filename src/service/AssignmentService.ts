@@ -4,6 +4,7 @@ import DatabaseConnection from "./DatabaseService";
 import { QueryResult } from "../model/QueryResult";
 import RouteResult from "../model/RouteResult";
 import { STATUS_CODES } from "http";
+import AppError from "../model/AppError";
 
 const HISTORY_DELIMITOR = '\0';
 
@@ -20,6 +21,11 @@ function formatQueryResult(result: QueryResult): RouteResult {
     return result.success
         ? { status: 200, responseJson: result.rows }
         : { status: 500, responseJson: { error: result.error } };
+}
+
+function checkQueryResult(result: QueryResult, requireRows: boolean) {
+    if (!result.success) throw new AppError(500, result.error);
+    if (requireRows && result.rows.length === 0) throw new AppError(404, "The query could not find any rows");
 }
 
 export async function getAssignmentList(db: DatabaseConnection) {
@@ -55,35 +61,25 @@ export async function getQuestionData(db: DatabaseConnection, questionId: number
             LEFT JOIN answers a ON a.ua_id = ua.id AND a.question_id = q.id
             WHERE q.id = @questionId;`, { 'questionId': questionId, 'userId': DEFAULT_USER_ID } );
 
-    if (!result.success) {
-        return {
-            status: 500,
-            responseJson: { error: result.error }
-        }
-    } else if (result.rows.length === 0) {
-        return {
-            status: 404,
-            responseJson: { error: "The requested question does not exist" }
-        }
-    } else {
-        const row = result.rows[0];
+    checkQueryResult(result, true);
 
-        const sandbox = new TemporaryDatabase(row.context);
-        const expected = sandbox.exec(row.answer).rows;
-        sandbox.destroy();
+    const row = result.rows[0];
 
-        return {
-            status: 200,
-            responseJson: {
-                id: row.id,
-                question: row.question,
-                context: row.context,
-                points: row.points,
-                expected: expected,
-                history: row.query_history != null ? row.query_history.split(HISTORY_DELIMITOR) : []
-            }
-        };
-    }
+    const sandbox = new TemporaryDatabase(row.context);
+    const expected = sandbox.exec(row.answer).rows;
+    sandbox.destroy();
+
+    return {
+        status: 200,
+        responseJson: {
+            id: row.id,
+            question: row.question,
+            context: row.context,
+            points: row.points,
+            expected: expected,
+            history: row.query_history != null ? row.query_history.split(HISTORY_DELIMITOR) : []
+        }
+    };
 }
 
 export async function checkAnswer(db: DatabaseConnection, questionId: number, userQuery: string): Promise<RouteResult> {
@@ -93,17 +89,7 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
             JOIN contexts c ON q.context_id = c.id
             WHERE q.id = @id;`, { 'id': questionId } );
 
-    if (!questionResult.success) {
-        return {
-            status: 500,
-            responseJson: { error: questionResult.error }
-        };
-    } else if (questionResult.rows.length == 0) {
-        return {
-            status: 404,
-            responseJson: { error: "The given question ID does not exist" }
-        };
-    }
+    checkQueryResult(questionResult, true);
 
     const question = questionResult.rows[0];
 
@@ -119,39 +105,21 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
         WHERE user_id = @user AND assignment_id = @assignment;`,
         uaParams);
 
-    if (!uaResult.success) {
-        return {
-            status: 500,
-            responseJson: { error: uaResult.error }
-        };
-    } else if (uaResult.rows.length === 0) {
+    checkQueryResult(uaResult, false);
+    
+    if (uaResult.rows.length === 0) {
         // TODO: Make sure there are no duplicates
         const uaInsertResult = await db.exec(`INSERT INTO users_assignments (user_id, assignment_id) VALUES (@user, @assignment)`,
             uaParams);
 
-        if (!uaInsertResult.success) {
-            return {
-                status: 500,
-                responseJson: { error: uaInsertResult.error }
-            };
-        }
+        checkQueryResult(uaInsertResult, false);
     }
 
     const uaSelectResult = await db.exec(`
         SELECT id FROM users_assignments
         WHERE user_id = @user AND assignment_id = @assignment;`, uaParams);
 
-    if (!uaSelectResult.success) {
-        return {
-            status: 500,
-            responseJson: { error: uaSelectResult.error }
-        };
-    } else if (uaSelectResult.rows.length === 0) {
-        return {
-            status: 404,
-            responseJson: { error: "The given user assignment does not exist" }
-        };
-    }
+    checkQueryResult(uaSelectResult, true);
 
     const uaId = uaSelectResult.rows[0].id;
 
@@ -169,18 +137,12 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
 
 
 
-
-
-
     const answerSelectResult = await db.exec(`SELECT id, query_history FROM answers WHERE ua_id = @ua AND question_id = @question;`,
         { ua: uaId, question: questionId });
 
-    if (!answerSelectResult.success) {
-        return {
-            status: 500,
-            responseJson: { error: answerSelectResult.error }
-        };
-    } else if (answerSelectResult.rows.length === 0) {
+    checkQueryResult(answerSelectResult, false);
+    
+    if (answerSelectResult.rows.length === 0) {
         // INSERT new answer
         const answerInsertResult = await db.exec(`INSERT INTO answers (ua_id, question_id, answer, query_history, score)
             VALUES (@ua, @question, @answer, @history, @score)`,
@@ -192,12 +154,7 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
             score: isCorrect ? question.points : 0
         });
 
-        if (!answerInsertResult.success) {
-            return {
-                status: 500,
-                responseJson: { error: answerInsertResult.error }
-            };
-        }
+        checkQueryResult(answerInsertResult, false);
     } else {
         // UPDATE existing answer
         
@@ -216,12 +173,7 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
             answerId: answerId
         });
 
-        if (!answerInsertResult.success) {
-            return {
-                status: 500,
-                responseJson: { error: answerInsertResult.error }
-            };
-        }
+        checkQueryResult(answerInsertResult, false);
     }
 
     return {
@@ -242,17 +194,7 @@ export async function clearHistory(db: DatabaseConnection, questionId: number): 
             WHERE q.id = @id`,
         {id: questionId, user: DEFAULT_USER_ID});
     
-    if (!uaResult.success) {
-        return {
-            status: 500,
-            responseJson: { error: uaResult.error }
-        }
-    } else if (uaResult.rows.length == 0) {
-        return {
-            status: 404,
-            responseJson: {}
-        }
-    }
+    checkQueryResult(uaResult, true);
 
     const uaId = uaResult.rows[0].id;
 
@@ -261,11 +203,10 @@ export async function clearHistory(db: DatabaseConnection, questionId: number): 
         WHERE ua_id = @ua AND question_id = @question`,
         { question: questionId, ua: uaId}));
 
-    return result.success ? {
-            status: 200,
-            responseJson: {}
-        } : {
-            status: 500,
-            responseJson: { error: result.error }
-        };
+    checkQueryResult(result, false);
+
+    return {
+        status: 200,
+        responseJson: {}
+    };
 }
