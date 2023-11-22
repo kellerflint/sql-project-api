@@ -5,7 +5,6 @@ import { checkAnswer, getAssignmentList, getQuestionList, getQuestionData, clear
 
 import DatabaseConnection from "./service/DatabaseService";
 import AppError from "./model/AppError";
-import { CodeAction } from "typescript";
 import RouteResult from "./model/RouteResult";
 
 const app = express();
