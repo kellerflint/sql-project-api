@@ -46,7 +46,7 @@ async function executeRoute(req: Request, res: Response, next: NextFunction, act
 }
 
 app.get('/assignments', async (req, res, next) => {
-    executeRoute(req, res, next, async (req) => {
+    executeRoute(req, res, next, async () => {
         return await getAssignmentList(db);
     });
 });
