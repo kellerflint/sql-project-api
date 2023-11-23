@@ -85,8 +85,6 @@ app.post('/clearhistory', async (req, res, next) => {
 });
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    //console.error(err.stack);
-
     let status = 500;
 
     if ('status' in err && typeof err.status === 'number') {

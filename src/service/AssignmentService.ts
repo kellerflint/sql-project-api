@@ -108,7 +108,6 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
     checkQueryResult(uaResult, false);
     
     if (uaResult.rows.length === 0) {
-        // TODO: Make sure there are no duplicates
         const uaInsertResult = await db.exec(`INSERT INTO users_assignments (user_id, assignment_id) VALUES (@user, @assignment)`,
             uaParams);
 
