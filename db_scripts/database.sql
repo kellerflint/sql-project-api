@@ -39,6 +39,11 @@ CREATE TABLE answers (
     question_id INT NOT NULL FOREIGN KEY REFERENCES questions(id),
  
     answer VARCHAR(255),
-    query_history VARCHAR(5000),
     score INT
+);
+
+CREATE TABLE query_history (
+	id INT PRIMARY KEY IDENTITY(1,1),
+	answer_id INT NOT NULL FOREIGN KEY REFERENCES answers(id),
+	[query] VARCHAR(5000) NOT NULL
 );
