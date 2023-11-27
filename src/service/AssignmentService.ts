@@ -5,9 +5,6 @@ import RouteResult from "../model/RouteResult";
 import AppError from "../model/AppError";
 import AssignmentRepository from "./AssignmentRepository";
 import QuestionAnswer from "../model/QuestionAnswer";
-import Question from "../model/Question";
-
-const HISTORY_DELIMITOR = '\0';
 
 // TODO: Use real values for user id
 const DEFAULT_USER_ID = 1;
@@ -16,17 +13,6 @@ function compareResults(a: QueryResult, b: QueryResult) {
     if (a.rows.length !== b.rows.length) return false;
 
     return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function formatQueryResult(result: QueryResult): RouteResult {
-    return result.success
-        ? { status: 200, responseJson: result.rows }
-        : { status: 500, responseJson: { error: result.error } };
-}
-
-function checkQueryResult(result: QueryResult, requireRows: boolean) {
-    if (!result.success) throw new AppError(500, result.error);
-    if (requireRows && result.rows.length === 0) throw new AppError(404, "The query could not find any rows");
 }
 
 export async function getAssignmentList(db: DatabaseConnection) {
