@@ -27,15 +27,9 @@ CREATE TABLE contexts (
     context VARCHAR(5000)
 );
  
-CREATE TABLE users_assignments (
-    id INT PRIMARY KEY,
-    user_id INT NOT NULL FOREIGN KEY REFERENCES users(id),
-    assignment_id INT NOT NULL FOREIGN KEY REFERENCES assignments(id)
-);
- 
 CREATE TABLE answers (
-    id INT PRIMARY KEY IDENTITY(1,1)
-    ua_id INT NOT NULL FOREIGN KEY REFERENCES users_assignments(id),
+    id INT PRIMARY KEY IDENTITY(1,1),
+    user_id INT NOT NULL FOREIGN KEY REFERENCES users(id),
     question_id INT NOT NULL FOREIGN KEY REFERENCES questions(id),
  
     answer VARCHAR(255),

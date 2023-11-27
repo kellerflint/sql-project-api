@@ -1,11 +1,17 @@
 export default class Question {
+    id: number;
+    assignmentId: number;
     prompt: string;
-    context: string;
     answerKey: string;
+    contextId: number;
+    points: number;
 
-    constructor(prompt: string, context: string, answerKey: string) {
+    constructor(id: number, assignmentId: number, prompt: string, answerKey: string, contextId: number, points: number) {
+        this.id = id;
+        this.assignmentId = assignmentId;
         this.prompt = prompt;
-        this.context = context;
         this.answerKey = answerKey;
+        this.contextId = contextId;
+        this.points = points;
     }
 }
