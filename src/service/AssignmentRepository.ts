@@ -33,12 +33,12 @@ export default class AssignmentRepository {
     async getAssignmentList() {
         const result = await this.db.exec(`
             SELECT
-                    a.id, a.title,
+                    a.id, a.title, a.due_date,
                     COUNT(q.id) 'questions',
                     COALESCE(SUM(q.points), 0) 'points'
                 FROM assignments a
                     LEFT JOIN questions q ON q.assignment_id = a.id
-                GROUP BY a.id, a.title;`);
+                GROUP BY a.id, a.title, a.due_date;`);
 
         return result.rows;
     }
