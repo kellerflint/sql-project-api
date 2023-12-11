@@ -25,6 +25,18 @@ export async function getAssignmentList(db: DatabaseConnection) {
     };
 }
 
+export async function getAssignmentData(db: DatabaseConnection, assignmentId: number): Promise<RouteResult> {
+    const repo = new AssignmentRepository(db);
+    const result = await repo.getAssignment(assignmentId);
+
+    if (result === null) throw new AppError(404, "The requested assignment does not exist");
+
+    return {
+        status: 200,
+        responseJson: result
+    }
+}
+
 export async function getQuestionList(db: DatabaseConnection, assignmentId: number) {
     const repo = new AssignmentRepository(db);
     const questions = await repo.getQuestionList(assignmentId);
@@ -104,6 +116,10 @@ export async function checkAnswer(db: DatabaseConnection, questionId: number, us
             result: actual.success ? actual.rows : actual.error
         }
     };
+}
+
+export async function assingmentChoice(db: DatabaseConnection, assignmentId: number) {
+
 }
 
 export async function clearHistory(db: DatabaseConnection, questionId: number): Promise<RouteResult> {

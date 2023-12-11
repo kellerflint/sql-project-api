@@ -2,6 +2,7 @@ import DatabaseConnection from "./DatabaseService";
 import Question from "../model/Question";
 import QuestionContext from "../model/QuestionContext";
 import QuestionAnswer from "../model/QuestionAnswer";
+import Assignment from "../model/Assignment";
 
 export default class AssignmentRepository {
     private db: DatabaseConnection;
@@ -41,6 +42,21 @@ export default class AssignmentRepository {
                 GROUP BY a.id, a.title, a.due_date;`);
 
         return result.rows;
+    }
+
+    async getAssignment(assignmentId: number): Promise<Assignment|null> {
+        const result = await this.db.exec(`SELECT * FROM assignments WHERE id = @assignmentId;`, { assignmentId: assignmentId });
+        
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const row = result.rows[0];
+
+        const questionsResult = await this.db.exec(`SELECT id FROM questions WHERE assignment_id = @assignmentId`,
+            { assignmentId: assignmentId });
+
+        return new Assignment(row.id, row.title, row.due_date, questionsResult.rows.map(row => row.id));
     }
 
     async getQuestionList(assignmentId: number): Promise<Question[]> {
@@ -153,8 +169,7 @@ export default class AssignmentRepository {
         const answerResult = await this.db.exec(`
             SELECT a.id
                 FROM answers a
-                JOIN users_assignments ua ON a.ua_id = ua.id
-                WHERE a.question_id = @questionId AND ua.user_id = @userId`,
+                WHERE a.question_id = @questionId AND a.user_id = @userId`,
             { questionId: questionId, userId: userId });
 
         if (answerResult.rows.length > 0) {

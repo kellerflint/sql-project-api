@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 
-import { checkAnswer, getAssignmentList, getQuestionList, getQuestionData, clearHistory } from "./service/AssignmentService";
+import { checkAnswer, getAssignmentList, getQuestionList, getQuestionData, clearHistory, getAssignmentData } from "./service/AssignmentService";
 
 import DatabaseConnection from "./service/DatabaseService";
 import AppError from "./model/AppError";
@@ -50,6 +50,17 @@ app.get('/assignments', async (req, res, next) => {
         return await getAssignmentList(db);
     });
 });
+
+
+app.get('/assignmentchoice', async (req, res, next) => {
+    executeRoute(req, res, next, async () => {
+        checkFields(req.query, res, 'id')
+        const assignmentId = parseInt(req.query.id as string);
+        return await getAssignmentData(db, assignmentId);
+    });
+});
+
+
 app.get('/questions', async (req, res, next) => {
     executeRoute(req, res, next, async (req) => {
         checkFields(req.query, res, 'assignment')
