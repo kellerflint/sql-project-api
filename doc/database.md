@@ -77,6 +77,8 @@ They were written for use with a Microsoft Azure server. If you are using a diff
 
 If you are using Microsoft Azure, you will need to authorize the public IP address of the machine that will be running the backend. In Azure, this setting may be found under `[Server name] > Security > Networking > Firewall rules`. To find your machine's public IP address, you may use a service such as [whatismyipaddress](https://whatismyipaddress.com/), or simply enter "what is my IP address" into Google.
 
+Note that your public IP address may change periodically, or if you connect to a different network. If this occurs, you will need to change the IP address you originally put into Azure’s firewall rules.
+
 ### Config File
 
 This project requires a configuration file in order to function. For a development environment, this file should exist at `./config/development.json`, and must be completed according to the following format:
